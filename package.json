@@ -1,13 +1,13 @@
 {
   "name": "soulforge",
   "version": "0.1.0",
-  "description": "Forge an OpenClaw agent from a dataset about a person",
+  "description": "Clone anyone into an AI agent. One command.",
   "type": "module",
   "bin": {
     "soulforge": "./src/index.js"
   },
   "files": [
-    "src/index.js",
+    "src/",
     "examples/"
   ],
   "scripts": {
