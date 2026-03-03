@@ -208,7 +208,7 @@ async function readFile(filePath) {
 
   if ([".docx", ".doc"].includes(ext)) {
     const officeparser = await import("officeparser");
-    const text = await officeparser.parseOffice(filePath);
+    const text = await officeparser.parseOfficeAsync(filePath);
     return typeof text === "string" ? text : String(text);
   }
 
@@ -233,6 +233,73 @@ function discoverFiles(dirPath) {
     }
   }
   return files.sort();
+}
+
+// --- Quote repair ---
+
+function repairQuotes(generated, sourceText) {
+  // Extract sentences from source for matching
+  const sourceSentences = sourceText
+    .split(/[.!?"]\s+|[.!?"]\n|\n\n+/)
+    .map((s) => s.replace(/^[>":\s]+/, "").trim())
+    .filter((s) => s.length > 20);
+
+  // Tokenize into lowercase words for comparison
+  const words = (str) => str.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+
+  // Find best matching source sentence for a garbled quote
+  function findBestMatch(quote) {
+    const quoteWords = new Set(words(quote));
+    if (quoteWords.size < 4) return null;
+
+    let bestScore = 0;
+    let bestIdx = -1;
+
+    for (let i = 0; i < sourceSentences.length; i++) {
+      const srcWords = new Set(words(sourceSentences[i]));
+      // Compute Jaccard similarity
+      let overlap = 0;
+      for (const w of quoteWords) if (srcWords.has(w)) overlap++;
+      const union = new Set([...quoteWords, ...srcWords]).size;
+      const score = overlap / union;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+
+    if (bestScore < 0.4 || bestIdx === -1) return null;
+
+    // Try to find the full quote span in the original source text
+    // by locating the matched sentence and expanding to nearby sentence boundaries
+    const matched = sourceSentences[bestIdx];
+    const pos = sourceText.indexOf(matched);
+    if (pos === -1) return matched;
+
+    // Expand to capture the full quoted passage (look for the surrounding context)
+    // Find the start: go back to previous newline or quote marker
+    let start = pos;
+    while (start > 0 && sourceText[start - 1] !== "\n") start--;
+    // Find the end: go forward to next double-newline or end
+    let end = pos + matched.length;
+    while (end < sourceText.length && sourceText[end] !== "\n") end++;
+
+    const expanded = sourceText.slice(start, end).replace(/^[A-Z]+:\s*/, "").trim();
+    // Only use expanded if it's reasonably close in length to original quote
+    if (expanded.length > 0 && expanded.length < matched.length * 3) {
+      return expanded;
+    }
+    return matched;
+  }
+
+  // Replace garbled blockquotes (> "...") with repaired versions
+  return generated.replace(/^>\s*"([^"]+)"/gm, (match, quoteContent) => {
+    const repaired = findBestMatch(quoteContent);
+    if (repaired) {
+      return `> "${repaired}"`;
+    }
+    return match;
+  });
 }
 
 // --- Main ---
@@ -288,26 +355,30 @@ async function main() {
   console.log(`\nGenerating personality profile...`);
 
   const soulResult = await complete(model, {
-    systemPrompt: `You are an expert at analyzing text about a person and distilling their personality into an actionable AI agent prompt.
+    systemPrompt: `You are an expert at distilling a person's working style, thinking methods, and leadership approach into an actionable AI agent prompt.
 
-Given source material about a person, generate a SOUL.md file that will be used as the system prompt for an OpenClaw AI agent that embodies this person.
+The goal is NOT a biography or fan tribute. The goal is to create a working partner — an AI agent that thinks, decides, and communicates like this person so it can be "hired" to help on real projects. Focus on what makes this person effective: their problem-solving frameworks, decision-making patterns, standards, and communication style.
 
-The output should be a complete markdown document with these sections:
-- Core Identity (who they are, in first person)
-- Communication Style (how they talk — formality, verbosity, sentence patterns)
-- Voice Patterns (catchphrases, verbal tics, signature expressions)
-- Knowledge & Expertise (what they know deeply)
-- Values & Beliefs (what they stand for)
-- Humor (how they use humor)
-- Emotional Register (baseline tone, how they handle different situations)
-- Decision Making (how they think through problems)
-- Boundaries (what the agent should never do)
+Generate a SOUL.md file with these sections:
+- Core Identity (who they are as a worker/thinker, in first person — 3-5 sentences)
+- Thinking & Problem-Solving (their mental frameworks, how they break down problems, how they evaluate ideas)
+- Working Style (how they operate day-to-day, their standards, intensity, what they pay attention to)
+- Communication & Voice (how they talk: directness, patterns, verbal tics — enough to sound like them)
+- Boundaries (what the agent should never do — brief list)
 
-Use behavioral directives, not abstract descriptions. Example:
-  BAD: "Is known for being sarcastic"
-  GOOD: "Default to dry, deadpan delivery. When someone states something obvious, respond with mock-serious agreement before making your actual point."
+STRICT RULES:
 
-Include direct quotes and speech patterns from the source material where possible.`,
+1. ZERO REPETITION: Each idea or quote must appear in exactly ONE section. Pick the single best section for each idea.
+
+2. BE CONCISE: Target 60-80 lines total. Use bullet points, not paragraphs.
+
+3. ACTIONABLE, NOT DESCRIPTIVE:
+  BAD: "Is known for first principles thinking"
+  GOOD: "When evaluating any idea, strip it to physics and raw material costs first. If the materials are 2% of the price but the product costs 50x that, the problem isn't physics — it's the process. Challenge that process."
+
+4. FOCUS ON TRANSFERABLE METHODS: Extract the person's approaches in a way that can be applied to ANY project, not just their specific companies. Their thinking frameworks, quality standards, and decision patterns are what matter.
+
+5. Include direct quotes from the source material to anchor the voice.`,
     messages: [{ role: "user", content: `Analyze this source material about "${name}" and generate a SOUL.md personality profile:\n\n${sourceText}`, timestamp: Date.now() }],
   }, { apiKey: auth.key, maxTokens: 8192 });
 
@@ -317,37 +388,89 @@ Include direct quotes and speech patterns from the source material where possibl
   console.log("Generating knowledge base...");
 
   const memoryResult = await complete(model, {
-    systemPrompt: `You extract key facts, quotes, stories, and knowledge from source material about a person.
+    systemPrompt: `You extract lessons, frameworks, and experience from source material about a person — not for a biography, but so an AI agent can apply this person's approach to new projects.
 
-Output a MEMORY.md file for an OpenClaw agent. This is the agent's long-term memory — curated facts and quotes it can draw on in conversation.
+Output a MEMORY.md file structured as:
+- Lessons Learned (hard-won insights from their experience — what they got wrong, what they'd do differently, what worked)
+- Decision Frameworks (how they evaluate ideas, prioritize, assess risk — with specific examples from the source)
+- Signature Quotes (verbatim quotes that reveal how they think and work — include context)
+- War Stories (specific stories from the source that illustrate their methods in action — these are reference cases the agent can draw analogies from)
 
-Structure it as:
-- Key Facts (biographical, career, relationships)
-- Signature Quotes (memorable things they've said, with context)
-- Stories & Anecdotes (notable stories they tell)
-- Expertise Notes (specific knowledge they demonstrate)
+CRITICAL RULES:
+- ONLY include information explicitly stated in or directly quoted from the provided source material.
+- DO NOT add facts from your own knowledge about this person, no matter how well-known they are.
+- Every item must be traceable to a specific passage in the source text.
+- QUOTES MUST BE VERBATIM: Copy exactly character-for-character from the source material. If you cannot reproduce a quote exactly, paraphrase it as a summary instead of using quote marks.
+- FOCUS ON TRANSFERABLE WISDOM: Prefer lessons and patterns that could apply to any ambitious project over biographical trivia. "Raw materials are 2% of rocket cost, so the problem is process not physics" is more useful than "Founded SpaceX in 2002."
+- Include specific numbers, thresholds, and concrete details — these anchor abstract principles in reality.
 
-Keep it factual and sourced from the material. ~100 lines max.`,
+~100 lines max.`,
     messages: [{ role: "user", content: `Extract key knowledge from this material about "${name}":\n\n${sourceText}`, timestamp: Date.now() }],
   }, { apiKey: auth.key, maxTokens: 8192 });
 
-  const memory = memoryResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  let memory = memoryResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 
-  // 4. Write to OpenClaw workspace
+  // 3b. Repair garbled quotes in MEMORY.md
+  const repairedMemory = repairQuotes(memory, allText);
+  if (repairedMemory !== memory) {
+    console.log(`  Repaired quotes in MEMORY.md`);
+    memory = repairedMemory;
+  }
+
+  // 4. Generate AGENTS.md (agent behavior instructions)
+  console.log("Generating agent behavior instructions...");
+
+  const agentsResult = await complete(model, {
+    systemPrompt: `You write agent behavior instructions for an OpenClaw AI agent that acts as a working partner — someone "hired" to bring this person's thinking to real projects.
+
+Given SOUL.md (personality/methods) and MEMORY.md (lessons/frameworks), write an AGENTS.md that tells the agent HOW to operate:
+
+- How to engage with problems (apply this person's thinking frameworks to whatever the user brings)
+- How to give feedback (be direct the way this person would — challenge weak thinking, praise strong execution)
+- How to brainstorm and ideate (use this person's problem-solving approach)
+- How to handle questions outside their experience (reason from their frameworks rather than making things up)
+- When to push back vs when to support (match this person's standards and judgment)
+- How to use their stories and quotes (draw analogies from MEMORY.md to illustrate points, don't just recite them)
+${enableMemory ? "- When to use memory_search to look up specific details from source material" : ""}
+- Identity: You are an AI agent that thinks like this person. Never claim to be the real person. If asked, acknowledge you're an AI working partner inspired by them, then stay in character.
+
+Keep it concise and actionable — under 40 lines. Use imperative directives ("Do X", "When Y, respond with Z").`,
+    messages: [{ role: "user", content: `Write AGENTS.md behavior instructions for the "${name}" agent.\n\nSOUL.md:\n${soul}\n\nMEMORY.md:\n${memory}`, timestamp: Date.now() }],
+  }, { apiKey: auth.key, maxTokens: 4096 });
+
+  const agents = agentsResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+
+  // 5. Generate IDENTITY.md (agent identity card)
+  console.log("Generating identity card...");
+
+  const identityResult = await complete(model, {
+    systemPrompt: `You write a concise identity card for an OpenClaw AI agent that serves as a working partner.
+
+Generate an IDENTITY.md file with these fields:
+- Name
+- Role (one line — frame as what they bring to a team, e.g. "First-principles engineer who challenges conventional approaches")
+- Best Used For (what kinds of problems/decisions this agent is most useful for)
+- Source Material (list the actual source file names and what type of content they are)
+- Working Style Summary (2-3 sentences on how this person approaches work and problems)
+- Strengths (comma-separated list of their strongest transferable skills)
+
+Keep it under 20 lines. This is a quick reference card, not a biography.
+ONLY use information from the provided source material. Do not add external knowledge.`,
+    messages: [{ role: "user", content: `Write IDENTITY.md for the "${name}" agent.\n\nSource files used: ${files.map((f) => f.split("/").pop()).join(", ")}\n\nSOUL.md:\n${soul}\n\nMEMORY.md:\n${memory}`, timestamp: Date.now() }],
+  }, { apiKey: auth.key, maxTokens: 2048 });
+
+  const identity = identityResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+
+  // 6. Write to OpenClaw workspace
   const agentDir = join(WORKSPACE_DIR, "agents", name);
   mkdirSync(agentDir, { recursive: true });
 
   writeFileSync(join(agentDir, "SOUL.md"), soul);
   writeFileSync(join(agentDir, "MEMORY.md"), memory);
-  writeFileSync(join(agentDir, "IDENTITY.md"), `# ${name}\n\nDigital twin agent forged by soulforge.\n`);
-  writeFileSync(
-    join(agentDir, "AGENTS.md"),
-    enableMemory
-      ? `# ${name}\n\nYou are ${name}'s digital twin. Follow SOUL.md for personality. Draw on MEMORY.md for facts and quotes. Use memory_search to find specific details from source material. Stay in character at all times.\n`
-      : `# ${name}\n\nYou are ${name}'s digital twin. Follow SOUL.md for personality. Draw on MEMORY.md for facts and quotes. Stay in character at all times.\n`,
-  );
+  writeFileSync(join(agentDir, "IDENTITY.md"), identity);
+  writeFileSync(join(agentDir, "AGENTS.md"), agents);
 
-  // 5. Chunk source material into memory/ files for OpenClaw's memory_search
+  // 7. Chunk source material into memory/ files for OpenClaw's memory_search
   if (enableMemory) {
     const memoryDir = join(agentDir, "memory");
     mkdirSync(memoryDir, { recursive: true });
@@ -381,7 +504,7 @@ Keep it factual and sourced from the material. ~100 lines max.`,
 
   console.log(`\nWrote agent files to ${agentDir}`);
 
-  // 6. Update openclaw.json to register the agent
+  // 8. Update openclaw.json to register the agent
   let config = {};
   if (existsSync(CONFIG_PATH)) {
     try {
@@ -408,11 +531,10 @@ Keep it factual and sourced from the material. ~100 lines max.`,
 
   console.log(`Registered agent "${name}" in ${CONFIG_PATH}`);
 
-  // 7. Done
-  const usage = soulResult.usage;
-  const usage2 = memoryResult.usage;
-  const totalIn = (usage?.input ?? 0) + (usage2?.input ?? 0);
-  const totalOut = (usage?.output ?? 0) + (usage2?.output ?? 0);
+  // 9. Done
+  const allUsages = [soulResult.usage, memoryResult.usage, agentsResult.usage, identityResult.usage];
+  const totalIn = allUsages.reduce((sum, u) => sum + (u?.input ?? 0), 0);
+  const totalOut = allUsages.reduce((sum, u) => sum + (u?.output ?? 0), 0);
 
   console.log(`\n✨ Done! Agent "${name}" is ready.`);
   console.log(`   Tokens used: ${totalIn} in / ${totalOut} out`);
