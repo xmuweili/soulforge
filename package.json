@@ -30,8 +30,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "ai": "^4.3.0",
-    "@ai-sdk/anthropic": "^1.2.0",
+    "@mariozechner/pi-ai": "^0.55.4",
     "unpdf": "^0.12.1",
     "officeparser": "^5.1.1"
   }

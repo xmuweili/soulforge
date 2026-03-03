@@ -3,8 +3,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync, mkdirSync, existsSync } from "node:fs";
 import { resolve, join, extname } from "node:path";
 import { homedir } from "node:os";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { generateText } from "ai";
+import { complete, getModel } from "@mariozechner/pi-ai";
 
 // --- CLI parsing ---
 
@@ -60,28 +59,44 @@ const WORKSPACE_DIR = join(OPENCLAW_DIR, "workspace");
 const CONFIG_PATH = join(OPENCLAW_DIR, "openclaw.json");
 const AUTH_PATH = join(OPENCLAW_DIR, "agents", "main", "agent", "auth-profiles.json");
 
-function loadOpenClawAuth() {
-  // Read API key from OpenClaw's auth-profiles.json
+function loadOpenClawAuth(providerName) {
+  // Read API key/token from OpenClaw's auth-profiles.json
   if (!existsSync(AUTH_PATH)) return null;
 
   try {
     const auth = JSON.parse(readFileSync(AUTH_PATH, "utf-8"));
     const profiles = auth.profiles || {};
 
-    // Find an anthropic profile with a usable token
-    for (const [id, profile] of Object.entries(profiles)) {
-      if (profile.provider === "anthropic" && profile.token) {
-        // Prefer lastGood or order hint
-        const preferred = auth.lastGood?.anthropic;
-        if (preferred && preferred !== id) continue;
-        return profile.token;
+    // If a specific provider is requested, look for it first
+    if (providerName) {
+      // Prefer lastGood for this provider
+      const preferred = auth.lastGood?.[providerName];
+      if (preferred && profiles[preferred]) {
+        const p = profiles[preferred];
+        return p.access || p.token || null;
+      }
+
+      // Find any profile matching this provider
+      for (const profile of Object.values(profiles)) {
+        if (profile.provider === providerName) {
+          return profile.access || profile.token || null;
+        }
       }
     }
 
-    // Fallback: just grab the first anthropic token
+    // Fallback: look for an anthropic profile
+    for (const [id, profile] of Object.entries(profiles)) {
+      if (profile.provider === "anthropic") {
+        const preferred = auth.lastGood?.anthropic;
+        if (preferred && preferred !== id) continue;
+        return profile.access || profile.token || null;
+      }
+    }
+
+    // Last resort: first anthropic token
     for (const profile of Object.values(profiles)) {
-      if (profile.provider === "anthropic" && profile.token) {
-        return profile.token;
+      if (profile.provider === "anthropic") {
+        return profile.access || profile.token || null;
       }
     }
   } catch {
@@ -91,8 +106,8 @@ function loadOpenClawAuth() {
   return null;
 }
 
-function loadOpenClawModel() {
-  // Read default model from openclaw.json
+function loadOpenClawConfig() {
+  // Read default model and provider config from openclaw.json
   if (!existsSync(CONFIG_PATH)) return null;
 
   try {
@@ -100,25 +115,76 @@ function loadOpenClawModel() {
     const primary = config.agents?.defaults?.model?.primary;
     if (!primary) return null;
 
-    // OpenClaw format: "anthropic/claude-sonnet-4-5" -> "claude-sonnet-4-5"
-    if (primary.startsWith("anthropic/")) {
-      return primary.replace("anthropic/", "");
-    }
+    // OpenClaw format: "provider/model-id" -> extract both parts
+    const slashIdx = primary.indexOf("/");
+    if (slashIdx === -1) return { model: primary, provider: null, providerConfig: null };
 
-    return primary;
+    const providerName = primary.slice(0, slashIdx);
+    const modelId = primary.slice(slashIdx + 1);
+
+    const providerConfig = config.models?.providers?.[providerName] || null;
+
+    return { model: modelId, provider: providerName, providerConfig };
   } catch {
     return null;
   }
 }
 
-function resolveApiKey() {
-  // 1. OpenClaw auth-profiles
-  const clawKey = loadOpenClawAuth();
+function resolveModel(clawConfig) {
+  const providerName = clawConfig?.provider || "anthropic";
+  const modelId = modelOverride || clawConfig?.model || "claude-sonnet-4-20250514";
+
+  // 1. Try pi-ai's built-in model catalog
+  const builtinModel = getModel(providerName, modelId);
+  if (builtinModel) return { model: builtinModel, modelId };
+
+  // 2. Construct from OpenClaw provider config
+  const pc = clawConfig?.providerConfig;
+  if (!pc) {
+    throw new Error(`Unknown provider "${providerName}" and no OpenClaw provider config found.`);
+  }
+
+  const modelDef = pc.models?.find((m) => m.id === modelId) || {};
+
+  return {
+    model: {
+      id: modelDef.id || modelId,
+      name: modelDef.name || modelId,
+      api: pc.api || "anthropic-messages",
+      provider: providerName,
+      baseUrl: pc.baseUrl || "",
+      reasoning: modelDef.reasoning || false,
+      input: modelDef.input || ["text"],
+      cost: modelDef.cost || { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: modelDef.contextWindow || 128000,
+      maxTokens: modelDef.maxTokens || 8192,
+    },
+    modelId,
+  };
+}
+
+function resolveApiKey(providerName, providerConfig) {
+  // 1. Provider config apiKey with ${ENV_VAR} expansion (skip OAuth sentinels)
+  if (providerConfig?.apiKey) {
+    const raw = providerConfig.apiKey;
+    if (!raw.endsWith("-oauth")) {
+      const envMatch = raw.match(/^\$\{(.+)\}$/);
+      if (envMatch) {
+        const val = process.env[envMatch[1]];
+        if (val) return { key: val, source: `env (${envMatch[1]})` };
+      } else {
+        return { key: raw, source: "provider config" };
+      }
+    }
+  }
+
+  // 2. OpenClaw auth-profiles OAuth token
+  const clawKey = loadOpenClawAuth(providerName);
   if (clawKey) return { key: clawKey, source: "openclaw" };
 
-  // 2. Environment variable
+  // 3. ANTHROPIC_API_KEY legacy fallback
   if (process.env.ANTHROPIC_API_KEY) {
-    return { key: process.env.ANTHROPIC_API_KEY, source: "env" };
+    return { key: process.env.ANTHROPIC_API_KEY, source: "env (ANTHROPIC_API_KEY)" };
   }
 
   return null;
@@ -172,19 +238,21 @@ function discoverFiles(dirPath) {
 // --- Main ---
 
 async function main() {
-  // Resolve API key
-  const auth = resolveApiKey();
+  // Resolve model and provider config from OpenClaw
+  const clawConfig = loadOpenClawConfig();
+  const { model, modelId } = resolveModel(clawConfig);
+  const providerName = clawConfig?.provider || "anthropic";
+
+  // Resolve API key (provider-aware)
+  const auth = resolveApiKey(providerName, clawConfig?.providerConfig);
   if (!auth) {
     console.error("Error: No API key found.");
     console.error("  Set up OpenClaw (openclaw onboard) or export ANTHROPIC_API_KEY.");
     process.exit(1);
   }
 
-  // Resolve model
-  const model = modelOverride || loadOpenClawModel() || "claude-sonnet-4-20250514";
-
   console.log(`\n⚒️  soulforge — forging "${name}" from ${dataPath}\n`);
-  console.log(`  API key: ${auth.source} | Model: ${model}`);
+  console.log(`  Provider: ${providerName} (${model.api}) | Model: ${modelId}${model.baseUrl ? ` | Base URL: ${model.baseUrl}` : ""}`);
 
   // 1. Read all source files
   const files = discoverFiles(dataPath);
@@ -219,12 +287,8 @@ async function main() {
   // 2. Generate SOUL.md
   console.log(`\nGenerating personality profile...`);
 
-  const anthropic = createAnthropic({ apiKey: auth.key });
-
-  const soulResult = await generateText({
-    model: anthropic(model),
-    maxTokens: 8192,
-    system: `You are an expert at analyzing text about a person and distilling their personality into an actionable AI agent prompt.
+  const soulResult = await complete(model, {
+    systemPrompt: `You are an expert at analyzing text about a person and distilling their personality into an actionable AI agent prompt.
 
 Given source material about a person, generate a SOUL.md file that will be used as the system prompt for an OpenClaw AI agent that embodies this person.
 
@@ -244,18 +308,16 @@ Use behavioral directives, not abstract descriptions. Example:
   GOOD: "Default to dry, deadpan delivery. When someone states something obvious, respond with mock-serious agreement before making your actual point."
 
 Include direct quotes and speech patterns from the source material where possible.`,
-    prompt: `Analyze this source material about "${name}" and generate a SOUL.md personality profile:\n\n${sourceText}`,
-  });
+    messages: [{ role: "user", content: `Analyze this source material about "${name}" and generate a SOUL.md personality profile:\n\n${sourceText}`, timestamp: Date.now() }],
+  }, { apiKey: auth.key, maxTokens: 8192 });
 
-  const soul = soulResult.text;
+  const soul = soulResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 
   // 3. Generate MEMORY.md
   console.log("Generating knowledge base...");
 
-  const memoryResult = await generateText({
-    model: anthropic(model),
-    maxTokens: 8192,
-    system: `You extract key facts, quotes, stories, and knowledge from source material about a person.
+  const memoryResult = await complete(model, {
+    systemPrompt: `You extract key facts, quotes, stories, and knowledge from source material about a person.
 
 Output a MEMORY.md file for an OpenClaw agent. This is the agent's long-term memory — curated facts and quotes it can draw on in conversation.
 
@@ -266,10 +328,10 @@ Structure it as:
 - Expertise Notes (specific knowledge they demonstrate)
 
 Keep it factual and sourced from the material. ~100 lines max.`,
-    prompt: `Extract key knowledge from this material about "${name}":\n\n${sourceText}`,
-  });
+    messages: [{ role: "user", content: `Extract key knowledge from this material about "${name}":\n\n${sourceText}`, timestamp: Date.now() }],
+  }, { apiKey: auth.key, maxTokens: 8192 });
 
-  const memory = memoryResult.text;
+  const memory = memoryResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 
   // 4. Write to OpenClaw workspace
   const agentDir = join(WORKSPACE_DIR, "agents", name);
@@ -349,8 +411,8 @@ Keep it factual and sourced from the material. ~100 lines max.`,
   // 7. Done
   const usage = soulResult.usage;
   const usage2 = memoryResult.usage;
-  const totalIn = (usage?.promptTokens ?? 0) + (usage2?.promptTokens ?? 0);
-  const totalOut = (usage?.completionTokens ?? 0) + (usage2?.completionTokens ?? 0);
+  const totalIn = (usage?.input ?? 0) + (usage2?.input ?? 0);
+  const totalOut = (usage?.output ?? 0) + (usage2?.output ?? 0);
 
   console.log(`\n✨ Done! Agent "${name}" is ready.`);
   console.log(`   Tokens used: ${totalIn} in / ${totalOut} out`);
