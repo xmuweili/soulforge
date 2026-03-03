@@ -1,6 +1,6 @@
-<h1 align="center">soulforge</h1>
-
-<p align="center"><b>Clone anyone into an AI agent. One command.</b></p>
+<p align="center">
+  <img src="assets/hero.svg" alt="soulforge — clone anyone into an AI agent" width="100%">
+</p>
 
 <p align="center">
   Drop in a few interviews or transcripts. Get back a digital clone that thinks, talks, and makes decisions like the real person.
