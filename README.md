@@ -10,8 +10,18 @@
 
 <br>
 
+## Install
+
 ```bash
-node src/index.js elon-musk --data ./elon-interviews/
+git clone https://github.com/xmuweili/soulforge.git
+cd soulforge
+npm install
+```
+
+## Clone Someone
+
+```bash
+soulforge elon-musk --data ./examples/elon-musk/
 ```
 ```
 ⚒️  soulforge — forging "elon-musk"
@@ -25,13 +35,29 @@ Generating identity card...
    Chat:  openclaw --agent elon-musk
 ```
 
-Three transcripts in. A digital Elon out. Ask him to review your startup pitch. He'll tear it apart using first principles — just like the real one would.
+Then talk to the clone:
+
+```bash
+openclaw --agent elon-musk
+```
+
+Three transcripts in. A digital Elon out. Ask him to review your startup pitch — he'll tear it apart using first principles, just like the real one would.
 
 <br>
 
-## How It Works
+## More Examples
 
-You give it raw text about a person — interviews, podcasts, meeting transcripts, essays, anything where they're actually talking. Soulforge reads it all, then forges four files that capture *who this person is*:
+```bash
+soulforge my-cto --data ./cto-interviews/
+soulforge naval --data ./naval-podcast-transcripts/
+soulforge grandpa --data ./grandpa-stories/
+```
+
+Anyone with enough source material can be cloned. The more raw, unscripted material you feed it, the better the clone.
+
+<br>
+
+## What Gets Generated
 
 ```
 ~/.openclaw/workspace/agents/elon-musk/
@@ -41,77 +67,13 @@ You give it raw text about a person — interviews, podcasts, meeting transcript
 └── IDENTITY.md    # Their card — strengths, style, what they're best at
 ```
 
-The result isn't a trivia bot that recites Wikipedia. It's a clone that actually reasons like them. It has their mental models, their verbal tics, their standards. Ask it to review your code and it'll give you feedback *at their level*.
-
-<br>
-
-## Try It Now
-
-```bash
-git clone https://github.com/xmuweili/soulforge.git
-cd soulforge
-npm install
-```
-
-Run the included example (3 Elon Musk interview transcripts):
-
-```bash
-node src/index.js elon-musk --data ./examples/elon-musk/
-openclaw --agent elon-musk
-```
-
-Or clone someone you actually know:
-
-```bash
-node src/index.js my-cto --data ./cto-interviews/
-node src/index.js naval --data ./naval-podcast-transcripts/
-node src/index.js grandpa --data ./grandpa-stories/
-```
-
-Anyone with enough source material can be cloned. The more raw, unscripted material you feed it, the better the clone.
-
-<br>
-
-## What the Clone Looks Like
-
-From just 3 interview transcripts, here's what soulforge generates:
-
-**SOUL.md** — captures how they actually think:
-```markdown
-## Thinking & Problem-Solving
-
-First principles is physics applied to everyday problems. I strip things
-down to the most fundamental truths, then reason up from there. When
-people said rockets were expensive, I looked at raw materials — aluminum,
-carbon fiber, fuel — and they were maybe 2% of the price. The problem
-wasn't physics; it was how the industry worked. So I rebuilt the process.
-```
-
-**MEMORY.md** — their real experiences, not a Wikipedia summary:
-```markdown
-## War Stories
-
-**SpaceX Near-Death Experience:**
-First three launches failed. Had enough money for three, maybe four.
-"If the fourth one had failed, that was it — SpaceX was done.
-But the fourth one worked. Sometimes you just have to keep going."
-```
-
-**AGENTS.md** — how the clone applies their thinking to *your* problems:
-```markdown
-1. Apply first principles to every problem — strip to physics and
-   fundamental facts, reject "because that's how it's done."
-2. When someone presents a problem, push to root cause —
-   "what's actually limiting this?"
-3. Challenge weak reasoning: "that's thinking by analogy, not
-   first principles."
-```
+The result isn't a trivia bot that recites Wikipedia. It's a clone that actually reasons like them — their mental models, their verbal tics, their standards.
 
 <br>
 
 ## Source Material
 
-The clone is only as good as what you feed it. Best sources:
+The clone is only as good as what you feed it.
 
 | Source | Why it works |
 |---|---|
@@ -120,51 +82,32 @@ The clone is only as good as what you feed it. Best sources:
 | Personal essays / blog posts | Shows their written voice |
 | Meeting transcripts | Captures working style under pressure |
 
-**Pro tips:**
-- Raw transcripts > polished articles. You want the "uh"s, the pauses, the self-corrections.
-- 3-5 sources from different contexts gives a well-rounded clone
-- Soulforge handles up to ~150K characters of source material
+Raw transcripts beat polished articles — you want the "uh"s, the pauses, the self-corrections. 3-5 sources from different contexts gives a well-rounded clone. Handles up to ~150K characters.
+
+**Supported formats:** `.txt` `.md` `.pdf` `.docx` `.doc`
 
 <br>
 
-## Usage
+## Options
 
 ```bash
-node src/index.js <name> --data <path> [options]
+soulforge <name> --data <path> [options]
 ```
 
 | Option | Description |
 |---|---|
-| `--data, -d <path>` | Source files — directory or single file (required) |
-| `--model, -m <model>` | Model override (default: from your `openclaw.json`) |
-| `--enable-memory` | Chunk source material for OpenClaw's `memory_search` |
+| `--data, -d <path>` | Source files — directory or single file |
+| `--model, -m <model>` | Model override |
+| `--enable-memory` | Enable semantic search over source material |
 | `--help, -h` | Show help |
-
-**Supported formats:** `.txt` `.md` `.pdf` `.docx` `.doc` — or any text file.
-
-### Memory Mode
-
-With `--enable-memory`, soulforge also chunks your raw source material into searchable files. OpenClaw's `memory_search` indexes them automatically — so the clone can pull up exact quotes and passages mid-conversation.
 
 <br>
 
 ## API Keys
 
-Soulforge reads your existing OpenClaw credentials. No extra setup needed.
+Reads your existing OpenClaw credentials automatically. No extra setup needed.
 
-**Lookup order:**
-1. Provider config in `~/.openclaw/openclaw.json`
-2. OAuth tokens from `~/.openclaw/agents/main/agent/auth-profiles.json`
-3. `ANTHROPIC_API_KEY` environment variable
-
-<br>
-
-## Development
-
-```bash
-npm test     # 22 tests
-npm start    # Run soulforge
-```
+Falls back to `ANTHROPIC_API_KEY` environment variable if OpenClaw isn't configured.
 
 <br>
 
