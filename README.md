@@ -3,19 +3,26 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/soulforge"><img src="https://img.shields.io/npm/v/soulforge" alt="npm version"></a>
+  <a href="https://github.com/xmuweili/soulforge/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/soulforge" alt="license"></a>
+</p>
+
+<p align="center">
   Drop in a few interviews or transcripts. Get back a digital clone that thinks, talks, and makes decisions like the real person.
   <br>
   Built for <a href="https://github.com/openclaw/openclaw">OpenClaw</a>.
 </p>
 
-<br>
-
 ## Install
 
 ```bash
-git clone https://github.com/xmuweili/soulforge.git
-cd soulforge
-npm install
+npm install -g soulforge
+```
+
+Or run directly with npx:
+
+```bash
+npx soulforge elon-musk --data ./interviews/
 ```
 
 ## Clone Someone
@@ -43,8 +50,6 @@ openclaw --agent elon-musk
 
 Three transcripts in. A digital Elon out. Ask him to review your startup pitch — he'll tear it apart using first principles, just like the real one would.
 
-<br>
-
 ## More Examples
 
 ```bash
@@ -54,8 +59,6 @@ soulforge grandpa --data ./grandpa-stories/
 ```
 
 Anyone with enough source material can be cloned. The more raw, unscripted material you feed it, the better the clone.
-
-<br>
 
 ## What Gets Generated
 
@@ -68,8 +71,6 @@ Anyone with enough source material can be cloned. The more raw, unscripted mater
 ```
 
 The result isn't a trivia bot that recites Wikipedia. It's a clone that actually reasons like them — their mental models, their verbal tics, their standards.
-
-<br>
 
 ## Source Material
 
@@ -86,8 +87,6 @@ Raw transcripts beat polished articles — you want the "uh"s, the pauses, the s
 
 **Supported formats:** `.txt` `.md` `.pdf` `.docx` `.doc`
 
-<br>
-
 ## Options
 
 ```bash
@@ -101,15 +100,11 @@ soulforge <name> --data <path> [options]
 | `--enable-memory` | Enable semantic search over source material |
 | `--help, -h` | Show help |
 
-<br>
-
 ## API Keys
 
 Reads your existing OpenClaw credentials automatically. No extra setup needed.
 
 Falls back to `ANTHROPIC_API_KEY` environment variable if OpenClaw isn't configured.
-
-<br>
 
 ## License
 
