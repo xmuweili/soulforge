@@ -8,7 +8,7 @@ One command. Feed it text about a person. Get an [OpenClaw](https://github.com/o
 ## Try it now
 
 ```bash
-npx soulforge ada-chen --data ./examples/ada-chen/
+npx soulforge elon-musk --data ./examples/elon-musk/
 ```
 
 That's it. It reads your interviews/transcripts/notes, generates a personality profile, and registers a ready-to-use OpenClaw agent.
@@ -69,13 +69,13 @@ With `--enable-memory`, it also chunks your raw source material into `memory/sou
 
 ## Examples
 
-The repo includes a sample dataset for a fictional tech founder:
+The repo includes sample interview/transcript data:
 
 ```bash
 git clone https://github.com/xmuweili/soulforge.git
 cd soulforge
 npm install
-node src/index.js ada-chen --data ./examples/ada-chen/
+node src/index.js elon-musk --data ./examples/elon-musk/
 ```
 
 ## License

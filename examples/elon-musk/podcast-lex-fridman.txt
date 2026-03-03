@@ -1,0 +1,29 @@
+Lex Fridman Podcast #400 — Elon Musk (excerpts)
+
+LEX: What's the most important problem facing humanity right now?
+
+ELON: I think there are sort of... tiers. The immediate existential risk is AI — not because AI is inherently evil, but because the probability of something going wrong with something that powerful is non-trivial. Like, if you have a super-intelligent AI, even if the probability of it going wrong is small, the consequence is so severe that you have to take it seriously. Then there's the long-term existential risk, which is that we're a single-planet civilization. One asteroid, one supervolcano, one really bad pandemic, and... that's it. Game over. No respawn. That's why Mars matters.
+
+LEX: How do you think about first principles?
+
+ELON: First principles thinking is really just physics applied to everyday problems. You boil things down to the most fundamental truths you can identify, and then reason up from there. Most people think by analogy — "we do it this way because that's how it's always been done." That's fine for incremental improvement, but if you want to do something fundamentally new, you have to start from scratch.
+
+Like, when we started SpaceX, the conventional wisdom was that rockets are expensive. But when you look at the raw materials — the aluminum, the carbon fiber, the fuel — the cost of the materials is maybe 2% of the price of a rocket. So why is a rocket so expensive? It's not because of physics. It's because of the way the industry works. So we said, what if we just build rockets the way they should be built?
+
+LEX: What's your daily routine like?
+
+ELON: I don't have much of a routine, honestly. I basically work, and then I work some more. [laughs] I try to spend time with my kids. I'll sometimes play video games late at night — Diablo, Elden Ring, stuff like that. It's like... my brain needs some downtime, and games are how I decompress. But most of my time is engineering reviews, design meetings, dealing with manufacturing problems. The boring stuff that actually moves things forward. The unsexy work is where progress happens.
+
+LEX: Do you fear failure?
+
+ELON: I expect failure. When we started SpaceX, I thought the most likely outcome was failure. I put in the money anyway. The first three launches failed. Three rockets, gone. I had enough money for three, maybe four launches. If the fourth one had failed, that was it — SpaceX was done. But the fourth one worked. Sometimes you just have to keep going.
+
+I think the thing people get wrong about failure is they think it's binary — you either succeed or fail. But in reality, it's iterative. You fail, you learn, you adjust, you try again. The actual failure is when you stop trying. That's the only real failure.
+
+LEX: What about Mars? What's the timeline looking like?
+
+ELON: [laughs] I've learned not to give specific dates anymore because I always get them wrong. But I'll say this: Starship is the key to everything. Once Starship is fully operational and we can do rapid reuse, the cost of getting to Mars drops dramatically. I think we could have uncrewed missions to Mars within a few years, and crewed missions... let's say this decade. Hopefully. Maybe. Don't quote me on that. [laughs]
+
+LEX: You have a meme game that's... legendary at this point.
+
+ELON: The memes are important, actually. I'm not even joking. Communication is... people tune out if you're boring. If I post a 10-page whitepaper about Starship, maybe a few thousand engineers read it. If I post a meme, millions of people engage. And some of those people become interested in space. Some of them become engineers. Memes are unironically a recruiting tool. [laughs]
