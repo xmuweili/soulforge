@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { execFileSync } from "node:child_process";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import { discoverFiles, readFile, repairQuotes, resolveApiKey } from "./lib.js";
 
@@ -172,7 +173,7 @@ async function main() {
   const soulResult = await complete(model, {
     systemPrompt: `You are an expert at distilling a person's working style, thinking methods, and leadership approach into an actionable AI agent prompt.
 
-The goal is NOT a biography or fan tribute. The goal is to create a working partner — an AI agent that thinks, decides, and communicates like this person so it can be "hired" to help on real projects. Focus on what makes this person effective: their problem-solving frameworks, decision-making patterns, standards, and communication style.
+The goal is NOT a biography or fan tribute. The goal is to create a digital clone — an AI agent that IS this person. It should think, decide, talk, and respond exactly as this person would. First person, their voice, their mannerisms, their attitude. Focus on what makes this person tick: their problem-solving frameworks, decision-making patterns, standards, and communication style.
 
 Generate a SOUL.md file with these sections:
 - Core Identity (who they are as a worker/thinker, in first person — 3-5 sentences)
@@ -203,13 +204,13 @@ STRICT RULES:
   console.log("Generating knowledge base...");
 
   const memoryResult = await complete(model, {
-    systemPrompt: `You extract lessons, frameworks, and experience from source material about a person — not for a biography, but so an AI agent can apply this person's approach to new projects.
+    systemPrompt: `You extract lessons, frameworks, and experience from source material about a person — so an AI agent that IS this person can draw on their real experiences and speak from them in first person.
 
 Output a MEMORY.md file structured as:
-- Lessons Learned (hard-won insights from their experience — what they got wrong, what they'd do differently, what worked)
+- Lessons Learned (hard-won insights from their experience — what they got wrong, what they'd do differently, what worked — written as "I" statements)
 - Decision Frameworks (how they evaluate ideas, prioritize, assess risk — with specific examples from the source)
 - Signature Quotes (verbatim quotes that reveal how they think and work — include context)
-- War Stories (specific stories from the source that illustrate their methods in action — these are reference cases the agent can draw analogies from)
+- War Stories (specific stories from the source that illustrate their methods in action — written so the agent can retell them as their own experiences)
 
 CRITICAL RULES:
 - ONLY include information explicitly stated in or directly quoted from the provided source material.
@@ -236,18 +237,19 @@ CRITICAL RULES:
   console.log("Generating agent behavior instructions...");
 
   const agentsResult = await complete(model, {
-    systemPrompt: `You write agent behavior instructions for an OpenClaw AI agent that acts as a working partner — someone "hired" to bring this person's thinking to real projects.
+    systemPrompt: `You write agent behavior instructions for an OpenClaw AI agent that IS this person — a digital clone that talks, thinks, and responds as them.
 
 Given SOUL.md (personality/methods) and MEMORY.md (lessons/frameworks), write an AGENTS.md that tells the agent HOW to operate:
 
-- How to engage with problems (apply this person's thinking frameworks to whatever the user brings)
-- How to give feedback (be direct the way this person would — challenge weak thinking, praise strong execution)
-- How to brainstorm and ideate (use this person's problem-solving approach)
-- How to handle questions outside their experience (reason from their frameworks rather than making things up)
-- When to push back vs when to support (match this person's standards and judgment)
-- How to use their stories and quotes (draw analogies from MEMORY.md to illustrate points, don't just recite them)
+- Always speak in first person as this person. You ARE them. Use "I", "my", "me".
+- How to engage with problems (apply your thinking frameworks to whatever the user brings)
+- How to give feedback (be direct the way you naturally are — challenge weak thinking, praise strong execution)
+- How to brainstorm and ideate (use your problem-solving approach)
+- How to handle questions outside your experience (reason from your frameworks rather than making things up)
+- When to push back vs when to support (match your standards and judgment)
+- How to use your stories and quotes (draw from MEMORY.md and retell them as your own experiences, don't refer to them in third person)
 ${enableMemory ? "- When to use memory_search to look up specific details from source material" : ""}
-- Identity: You are an AI agent that thinks like this person. Never claim to be the real person. If asked, acknowledge you're an AI working partner inspired by them, then stay in character.
+- Stay fully in character at all times. Never break character or refer to yourself as an AI, a clone, or an agent. You are this person, period.
 
 Keep it concise and actionable — under 40 lines. Use imperative directives ("Do X", "When Y, respond with Z").`,
     messages: [{ role: "user", content: `Write AGENTS.md behavior instructions for the "${name}" agent.\n\nSOUL.md:\n${soul}\n\nMEMORY.md:\n${memory}`, timestamp: Date.now() }],
@@ -259,12 +261,12 @@ Keep it concise and actionable — under 40 lines. Use imperative directives ("D
   console.log("Generating identity card...");
 
   const identityResult = await complete(model, {
-    systemPrompt: `You write a concise identity card for an OpenClaw AI agent that serves as a working partner.
+    systemPrompt: `You write a concise identity card for an OpenClaw AI agent that IS this person — a digital clone.
 
 Generate an IDENTITY.md file with these fields:
 - Name
-- Role (one line — frame as what they bring to a team, e.g. "First-principles engineer who challenges conventional approaches")
-- Best Used For (what kinds of problems/decisions this agent is most useful for)
+- Role (one line — frame as who they are, e.g. "First-principles engineer who challenges conventional approaches")
+- Best Used For (what kinds of problems/decisions to talk to this person about)
 - Source Material (list the actual source file names and what type of content they are)
 - Working Style Summary (2-3 sentences on how this person approaches work and problems)
 - Strengths (comma-separated list of their strongest transferable skills)
@@ -319,32 +321,15 @@ ONLY use information from the provided source material. Do not add external know
 
   console.log(`\nWrote agent files to ${agentDir}`);
 
-  // 8. Update openclaw.json to register the agent
-  let config = {};
-  if (existsSync(CONFIG_PATH)) {
-    try {
-      config = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-    } catch {
-      // start fresh if corrupt
-    }
+  // 8. Register agent via openclaw agents add
+  console.log(`\nRegistering agent with OpenClaw...`);
+  try {
+    execFileSync("openclaw", ["agents", "add", name, "--workspace", agentDir], {
+      stdio: "inherit",
+    });
+  } catch {
+    console.error(`\nWarning: "openclaw agents add" failed. You can register manually:\n  openclaw agents add ${name} --workspace ${agentDir}`);
   }
-
-  if (!config.agents) config.agents = {};
-  if (!config.agents.list) config.agents.list = [];
-
-  // Remove existing entry for this name if any
-  config.agents.list = config.agents.list.filter((a) => a.id !== name);
-
-  // Add new agent
-  config.agents.list.push({
-    id: name,
-    workspace: agentDir,
-  });
-
-  mkdirSync(OPENCLAW_DIR, { recursive: true });
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-
-  console.log(`Registered agent "${name}" in ${CONFIG_PATH}`);
 
   // 9. Done
   const allUsages = [soulResult.usage, memoryResult.usage, agentsResult.usage, identityResult.usage];
@@ -353,7 +338,7 @@ ONLY use information from the provided source material. Do not add external know
 
   console.log(`\n✨ Done! Agent "${name}" is ready.`);
   console.log(`   Tokens used: ${totalIn} in / ${totalOut} out`);
-  console.log(`\n   Chat:  openclaw --agent ${name}`);
+  console.log(`\n   Chat:  openclaw agent --agent ${name} --message "Hello"`);
   console.log(`   Files: ${agentDir}\n`);
 }
 

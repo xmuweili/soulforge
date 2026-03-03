@@ -39,13 +39,13 @@ Generating agent behavior instructions...
 Generating identity card...
 
 ✨ Done! Agent "elon-musk" is ready.
-   Chat:  openclaw --agent elon-musk
+   Chat:  openclaw agent --agent elon-musk --message "Hello"
 ```
 
 Then talk to the clone:
 
 ```bash
-openclaw --agent elon-musk
+openclaw agent --agent elon-musk --message "Review my startup pitch"
 ```
 
 Three transcripts in. A digital Elon out. Ask him to review your startup pitch — he'll tear it apart using first principles, just like the real one would.
@@ -70,7 +70,7 @@ Anyone with enough source material can be cloned. The more raw, unscripted mater
 └── IDENTITY.md    # Their card — strengths, style, what they're best at
 ```
 
-The result isn't a trivia bot that recites Wikipedia. It's a clone that actually reasons like them — their mental models, their verbal tics, their standards.
+The result isn't a trivia bot that recites Wikipedia. It's the person — talks like them, thinks like them, gives you advice like they're sitting across from you.
 
 ## Source Material
 
