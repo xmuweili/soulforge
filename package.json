@@ -1,0 +1,19 @@
+{
+  "name": "soulforge",
+  "version": "0.1.0",
+  "description": "Forge an OpenClaw agent from a dataset about a person",
+  "type": "module",
+  "bin": {
+    "soulforge": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ai": "^4.3.0",
+    "@ai-sdk/anthropic": "^1.2.0",
+    "unpdf": "^0.12.1",
+    "officeparser": "^5.1.1"
+  }
+}
