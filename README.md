@@ -13,6 +13,15 @@
   Built for <a href="https://github.com/openclaw/openclaw">OpenClaw</a>.
 </p>
 
+## Prerequisites
+
+Install [OpenClaw](https://github.com/openclaw/openclaw) first:
+
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+openclaw onboard
+```
+
 ## Install
 
 ```bash
