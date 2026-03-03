@@ -5,26 +5,21 @@ One command. Feed it text about a person. Get an [OpenClaw](https://github.com/o
 <!-- TODO: Replace with actual terminal recording -->
 <!-- ![demo](./demo.gif) -->
 
-## Try it now
+## Quick Start
 
 ```bash
-npx soulforge elon-musk --data ./examples/elon-musk/
+git clone https://github.com/xmuweili/soulforge.git
+cd soulforge
+npm install
+node src/index.js elon-musk --data ./examples/elon-musk/
 ```
 
 That's it. It reads your interviews/transcripts/notes, generates a personality profile, and registers a ready-to-use OpenClaw agent.
 
-## Install
-
-```bash
-npm install -g soulforge
-```
-
-Or just use `npx soulforge` — no install needed.
-
 ## Usage
 
 ```bash
-soulforge <name> --data <path>
+node src/index.js <name> --data <path>
 ```
 
 **What it does:**
@@ -65,17 +60,6 @@ With `--enable-memory`, it also chunks your raw source material into `memory/sou
 ├── AGENTS.md      # Agent behavior instructions
 ├── IDENTITY.md    # Identity card
 └── memory/        # (with --enable-memory) chunked source material
-```
-
-## Examples
-
-The repo includes sample interview/transcript data:
-
-```bash
-git clone https://github.com/xmuweili/soulforge.git
-cd soulforge
-npm install
-node src/index.js elon-musk --data ./examples/elon-musk/
 ```
 
 ## License
