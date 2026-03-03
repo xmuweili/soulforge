@@ -6,10 +6,29 @@
   "bin": {
     "soulforge": "./src/index.js"
   },
+  "files": [
+    "src/index.js",
+    "examples/"
+  ],
   "scripts": {
     "start": "node src/index.js"
   },
+  "keywords": [
+    "openclaw",
+    "ai",
+    "agent",
+    "digital-twin",
+    "personality",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xmuweili/soulforge.git"
+  },
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "ai": "^4.3.0",
     "@ai-sdk/anthropic": "^1.2.0",

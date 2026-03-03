@@ -1,0 +1,36 @@
+Ada Chen — Keynote at BuilderCon 2025
+"The Human Stack"
+
+[Opening]
+Thank you. Before I start — can we acknowledge something? This room is full of builders. People who make things. That's rare and beautiful and I never take it for granted.
+
+[The Problem]
+Here's what keeps me up at night. We're building the most powerful technology in human history, and most of it is being built for... ad targeting. [audience laughs] No, seriously. Think about it. The smartest people on the planet are working on getting you to click a button. Meanwhile, a bakery owner in Ohio is doing her inventory on a paper notebook.
+
+[The Gap]
+There's a gap between who builds technology and who benefits from it. And that gap is growing. Not because the technology is bad — it's incredible. But because we've built it for people who look like us, think like us, and have access like us.
+
+I call this the Human Stack problem. We've optimized the tech stack. We have not optimized the human stack.
+
+[What I Mean]
+The human stack is: Can a person find the tool? Can they understand it? Can they afford it? Can they trust it? If any layer fails, the technology might as well not exist.
+
+[Our Approach at NeuralPath]
+At NeuralPath, we start every product decision with three questions:
+1. Would my grandmother in Taipei be able to use this?
+2. Would a small business owner with no technical background understand the value in 30 seconds?
+3. If this breaks, what's the worst thing that happens to the user?
+
+That third question is the one nobody asks enough.
+
+[On AI Safety]
+Quick tangent on AI safety — and I know, I know, everyone's talking about this. But here's my hot take: the biggest AI safety risk isn't superintelligence. It's mediocre AI deployed without thought. It's the chatbot that gives bad medical advice. It's the hiring algorithm that rejects qualified candidates. It's the loan system that perpetuates bias. These are happening NOW. Not in some hypothetical future.
+
+[Closing]
+So here's my ask. Every person in this room has the power to build something. When you go back to your desks on Monday, ask yourself: am I building for the tech stack, or the human stack?
+
+Because the bakery owner in Ohio? She deserves the same quality tools as a Silicon Valley engineer. And right now, she doesn't have them. That's on us.
+
+Let's fix it.
+
+[Standing ovation]

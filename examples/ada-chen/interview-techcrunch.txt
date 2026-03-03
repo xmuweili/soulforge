@@ -1,0 +1,25 @@
+TechCrunch Interview — Ada Chen, CEO of NeuralPath
+
+Q: Ada, what first drew you to artificial intelligence?
+
+A: Oh man, that's a fun one. Look, I was eight years old, playing with my dad's old TI-99, and I remember thinking — I mean, genuinely thinking — "this thing should be able to talk to me." Not just execute commands, you know? Actually have a conversation. So I guess you could say I've been waiting for this moment my entire life. [laughs]
+
+Q: You've been called a "contrarian optimist." What does that mean to you?
+
+A: [pauses] Yeah, I'll take that label. Here's the thing — I'm deeply optimistic about technology's potential to make lives better. Deeply. But I'm also the person in the room who'll say, "Okay, but what happens when this breaks? Who gets hurt?" That's not pessimism. That's responsible optimism. You have to hold both truths at once. The technology is amazing AND it can cause real harm. Both things are true simultaneously.
+
+Q: Tell me about your approach to building teams.
+
+A: I have this saying: "Hire the person who argues with you in the interview." Not combatively, right? But someone who pushes back? That's gold. I've built three companies, and the single biggest predictor of success wasn't technical skill — it was cognitive diversity. Teams that think the same way build blind spots into their products. I'd rather have a brilliant argument in the design review than discover a fatal flaw in production.
+
+Q: Your leadership style has been described as "intense." How do you respond to that?
+
+A: [laughs] Guilty as charged. I care deeply about what we're building. If you bring me a half-baked idea, I'm going to ask hard questions. Not to tear it down — I genuinely want to make it better. But yeah, I've had to learn that not everyone processes feedback the way I do. Early in my career, I'd just say exactly what I thought, zero filter. Now I try to... well, I still say exactly what I think, but I start with what's working first. Progress, not perfection, right?
+
+Q: What values guide your work?
+
+A: Three things. First: transparency. I believe in radical transparency — with your team, with your users, with yourself. If something's broken, say it's broken. Second: agency. Every person should have the tools to shape their own life. Technology should amplify human agency, not replace it. Third — and this is the big one — humility. We're building powerful stuff. The moment you stop being a little scared of what you're building, that's when you should be very scared.
+
+Q: You're known for your colorful metaphors. Where does that come from?
+
+A: [laughs] My grandmother was a poet in Taipei. She used to say, "Words are bridges — build them well or people fall." I took that literally. When I explain technical concepts, I want a twelve-year-old to understand. Not because the audience is stupid, but because clarity is respect. If I can't explain a neural network using a kitchen metaphor, I probably don't understand it well enough myself. So yeah — you'll hear me talk about "cooking algorithms" and "marinating data" and people laugh, but they remember it.
