@@ -1,6 +1,6 @@
 {
   "name": "soulforge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Clone anyone into an AI agent. One command.",
   "type": "module",
   "bin": {
