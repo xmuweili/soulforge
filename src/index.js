@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { execFileSync } from "node:child_process";
 import { complete, getModel } from "@mariozechner/pi-ai";
 import { discoverFiles, readFile, repairQuotes, resolveApiKey } from "./lib.js";
 
@@ -12,36 +11,40 @@ import { discoverFiles, readFile, repairQuotes, resolveApiKey } from "./lib.js";
 const args = process.argv.slice(2);
 if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
   console.log(`
-soulforge <name> --data <path>
+soulforge <name> --data <path> --workspace <path>
 
   Forge an OpenClaw agent from a dataset about a person.
 
   Reads all files in <path> (txt, md, pdf, docx), builds a personality
-  profile, and creates a ready-to-use OpenClaw agent workspace.
+  profile, and saves the agent files to the specified workspace folder.
 
   API keys are read from your OpenClaw config (~/.openclaw/agents/main/agent/auth-profiles.json).
   Falls back to ANTHROPIC_API_KEY env var if OpenClaw is not set up.
 
 Options:
-  --data, -d <path>   Path to source files (required)
-  --model, -m <model> Model to use (default: from openclaw.json or claude-sonnet-4-20250514)
-  --enable-memory     Write chunked source files for OpenClaw memory_search
-  --help, -h          Show this help
+  --data, -d <path>       Path to source files (required)
+  --workspace, -w <path>  Output folder for agent files (required)
+  --model, -m <model>     Model to use (default: from openclaw.json or claude-sonnet-4-20250514)
+  --enable-memory         Write chunked source files for OpenClaw memory_search
+  --help, -h              Show this help
 
 Example:
-  soulforge elon-musk --data ./elon-interviews/
+  soulforge elon-musk --data ./elon-interviews/ --workspace ./agents/elon-musk
 `);
   process.exit(0);
 }
 
 const name = args[0];
 let dataPath = null;
+let workspacePath = null;
 let modelOverride = null;
 let enableMemory = false;
 
 for (let i = 1; i < args.length; i++) {
   if ((args[i] === "--data" || args[i] === "-d") && args[i + 1]) {
     dataPath = args[++i];
+  } else if ((args[i] === "--workspace" || args[i] === "-w") && args[i + 1]) {
+    workspacePath = args[++i];
   } else if ((args[i] === "--model" || args[i] === "-m") && args[i + 1]) {
     modelOverride = args[++i];
   } else if (args[i] === "--enable-memory") {
@@ -54,10 +57,14 @@ if (!dataPath) {
   process.exit(1);
 }
 
+if (!workspacePath) {
+  console.error("Error: --workspace <path> is required");
+  process.exit(1);
+}
+
 // --- Read OpenClaw config ---
 
 const OPENCLAW_DIR = join(homedir(), ".openclaw");
-const WORKSPACE_DIR = join(OPENCLAW_DIR, "workspace");
 const CONFIG_PATH = join(OPENCLAW_DIR, "openclaw.json");
 const AUTH_PATH = join(OPENCLAW_DIR, "agents", "main", "agent", "auth-profiles.json");
 
@@ -278,8 +285,8 @@ ONLY use information from the provided source material. Do not add external know
 
   const identity = identityResult.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 
-  // 6. Write to OpenClaw workspace
-  const agentDir = join(WORKSPACE_DIR, "agents", name);
+  // 6. Write agent files to workspace folder
+  const agentDir = resolve(workspacePath);
   mkdirSync(agentDir, { recursive: true });
 
   writeFileSync(join(agentDir, "SOUL.md"), soul);
@@ -321,25 +328,16 @@ ONLY use information from the provided source material. Do not add external know
 
   console.log(`\nWrote agent files to ${agentDir}`);
 
-  // 8. Register agent via openclaw agents add
-  console.log(`\nRegistering agent with OpenClaw...`);
-  try {
-    execFileSync("openclaw", ["agents", "add", name, "--workspace", agentDir], {
-      stdio: "inherit",
-    });
-  } catch {
-    console.error(`\nWarning: "openclaw agents add" failed. You can register manually:\n  openclaw agents add ${name} --workspace ${agentDir}`);
-  }
-
-  // 9. Done
+  // 8. Done
   const allUsages = [soulResult.usage, memoryResult.usage, agentsResult.usage, identityResult.usage];
   const totalIn = allUsages.reduce((sum, u) => sum + (u?.input ?? 0), 0);
   const totalOut = allUsages.reduce((sum, u) => sum + (u?.output ?? 0), 0);
 
-  console.log(`\n✨ Done! Agent "${name}" is ready.`);
+  console.log(`\n✨ Done! Agent "${name}" files saved.`);
   console.log(`   Tokens used: ${totalIn} in / ${totalOut} out`);
-  console.log(`\n   Chat:  openclaw agent --agent ${name} --message "Hello"`);
-  console.log(`   Files: ${agentDir}\n`);
+  console.log(`   Files: ${agentDir}`);
+  console.log(`\n   To register with OpenClaw:`);
+  console.log(`     openclaw agents add ${name} --workspace ${agentDir}\n`);
 }
 
 main().catch((err) => {
